@@ -9,7 +9,7 @@ WIP
 * Basic matrices creation and operation (*finished*, needs optimation)
 * Determinent (*finished*) 
 * SVD (**WIP**)
-* Inverse and any-integer power (**WIP**)
+* Inverse and any-integer power (**finished**)
 * Matrix functions (exp, sin, etc., **WIP**)
 * ...
 ## Numerical Differentiation (WIP)
