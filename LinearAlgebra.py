@@ -1,14 +1,7 @@
+from ._util import _flatten
+from ._const import EPS
 from operator import add, mul
-eps = abs(7./3 - 4./3 - 1) # Machine error
 
-def _flatten(a: list):
-    a_flatten = []
-    for sublist in a:
-        try:
-            a_flatten += sublist
-        except TypeError:
-            a_flatten.append(sublist)
-    return a_flatten
 
 class Matrix:
     def __init__(self, elements, shape=None):
@@ -55,7 +48,15 @@ class Matrix:
         except TypeError:
             self.elements[i] = item
 
-    def is_diag(self, error=eps) -> bool:
+    def is_diag(self, error: float=EPS) -> bool:
+        """Check if a matrix is a diagonal square matrix
+
+        Args:
+            error (float, optional): Allowed error. Defaults to EPS i.e. the machine error.
+
+        Returns:
+            bool: if the matrix is square and diagonal, returns True, elsewise False.
+        """
         n, m = self.shape
         if n != m:
             return False
@@ -65,9 +66,11 @@ class Matrix:
         else:
             return True
 
-    def __float__(self):
-        """
-        Convert a $\lambda I_n$-like matrix to a floating number.
+    def __float__(self) -> float:
+        """Convert a $\lambda I_n$-like matrix to a floating number.
+
+        Returns:
+            float: the diagonal value $\lambda$.
         """
         n, m = self.shape
         if n == m:
@@ -97,7 +100,7 @@ class Matrix:
                 raise ValueError("The shape of two matrices shall be the same.")
             C = [list(map(add, A[i], B[i])) for i in range(n)]
         else:
-            C = [list(map(lambda x: x + B, A[i])) for i in range(n)]
+            C = [[a + B for a in A[i]] for i in range(n)]
         return Matrix(C)
     
     def __radd__(self, B):
@@ -241,8 +244,16 @@ class Matrix:
             A = self.inverse()
             p = -p
         result = eye(n)
-        for _ in range(1, p+1):
-            result *= A
+        if p < 16:
+            for _ in range(1, p+1):
+                result *= A
+        else:
+            gen_bin = (int(i) for i in bin(p)[2:])
+            A2i = A
+            for bi in gen_bin:
+                if bi == 1:
+                    result *= A2i
+                A2i **= 2 
         return result
 
 def concatenate(A, B, vertical=False):
@@ -275,27 +286,9 @@ def eye(n):
     I_n = O_n
     return I_n
 
-def zeros(n, m):
+def zeros(n, m=1):
     O_n = [[0.]* m for _ in range(n)]
     return Matrix(O_n)
-
-def concatenate(self, B, vertical=False):
-    n_A, m_A = self.shape
-    n_B, m_B = self.shape
-    if not vertical:
-        if n_A != n_B:
-            raise ValueError ("Cannot concatenate two matrices with different number of rows")
-        A = self.elements
-        B = B.elements
-        C = [A[i] + B[i] for i in range(n_B)]
-        return Matrix(C)
-    else:
-        if m_A != m_B:
-            raise ValueError ("Cannot stack two matrices with different number of columns")
-        A = self.elements
-        B = B.elements
-        C = A + B
-        return Matrix(C)
 
 def timeit(f, N=10000):
     from time import time
@@ -305,11 +298,12 @@ def timeit(f, N=10000):
     dt = time() - t0
     print("total cost: {} ms, per loop: {} us".format(dt*1e3, dt/N * 1e6))
 
-if __name__ == "__main__":
-    from random import random
-    n = 3
-    X = Matrix([random() for _ in range(n ** 2)], (n, n))
-    A = 2 * eye(3)
-    B = A ** 2
-    C = A ** (-2)
-    print("OK")
+def matrixify(func, *args, **kwargs):
+    def Mfunc(A):
+        if isinstance(A, Matrix):
+            n, _ = A.shape
+            A_func = [[func(a, *args, **kwargs) for a in A[i]] for i in range(n)]
+            return Matrix(A_func)
+        else:
+            return func(A)
+    return Mfunc 
