@@ -105,6 +105,12 @@ class Matrix:
     
     def __radd__(self, B):
         return self + B
+    
+    def __sub__(self, B):
+        return self + (-1.) * B
+
+    def __rsub__(self, B):
+        return B + (-1.) * self
 
     def __repr__(self):
         return "({},{}) Matrix\n{}".format(*self.shape, str(self))

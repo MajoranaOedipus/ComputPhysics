@@ -19,7 +19,7 @@ and
 
 ```python
 from PyComPhy.LinearAlgebra import Matrix, eye
-A = Matrix(list(range(9)), (3, 3))
+A = Matrix(list(range(9)), (3, 3)) + eye(3)
 A_inv = A.inverse()
 A * A_inv - eye(3)
 ```
