@@ -11,7 +11,7 @@ Clone this repository add it to your `PATH` or `cd` to `PyComPhy/..` and try the
 from PyComPhy.Differentiation import diff_f
 f = lambda x: x**3
 f_p = diff_f(f)
-f_pp = diff(f, n=2)
+f_pp = diff_f(f, n=2)
 f(1), f_p(1), f_pp(1)
 ```
 
