@@ -19,11 +19,9 @@ def central_diff_weights(Np: int, ndiv: int=1):
 
 def diff_f(f, dx=1.0, n=1, order=3, *args, **kwargs):
     if order < n + 1:
-        raise ValueError("'order' (the number of points used to compute the derivative), "
-                         "must be at least the derivative order 'n' + 1.")
+        raise ValueError("'order' (the number of points used to compute the derivative), " + "must be at least the derivative order 'n' + 1.")
     if order % 2 == 0:
-        raise ValueError("'order' (the number of points used to compute the derivative) "
-                         "must be odd.")
+        raise ValueError("'order' (the number of points used to compute the derivative) " + "must be odd.")
     f_prime = None
     weights = central_diff_weights(order, n)
 
