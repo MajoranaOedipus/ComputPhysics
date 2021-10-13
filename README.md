@@ -1,4 +1,4 @@
-# PyComPhy
+# ComputationalPhysicsPython
 Pure Python Computational Physics Package (For Study)
 
 **Use PyPy for a better perfomance!** 
