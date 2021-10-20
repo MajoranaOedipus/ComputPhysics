@@ -73,6 +73,23 @@ class Polynomial:
 
     def __truediv__(self, value):
         return self * value**(-1)
+
+    def diff(self, n: int=1):
+        d = self.d
+        if n > d:
+            return zero_poly(type(self.factors[0]))
+        
+        factors = self.factors
+        diff_factors = [0] * (d - n + 1)
+        for i in range(d - n + 1):
+            diff_factors[i] = factors[i + n]
+            for j in range(n):
+                diff_factors[i] *= (i + n - j)
+        
+        return Polynomial(diff_factors)
+
+def zero_poly(type=int):
+    return Polynomial([type(0)])
         
         
 

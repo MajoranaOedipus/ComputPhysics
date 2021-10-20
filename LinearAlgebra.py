@@ -1,19 +1,23 @@
 from ._util import _flatten
 from ._const import EPS
-from operator import add, mul
+
+# for type hits
+from typing import Optional, Union, Tuple
+Idx = Union[int, Tuple[Union[int, slice], Union[int, slice]]]
 
 
 class Matrix:
-    def __init__(self, elements, shape=None):
+    def __init__(self, elements, 
+                shape: Union[int, Tuple[int, int], None] = None):
         if type(elements) == Matrix:
-            self.elements = elements.elements
-            self.shape = shape
+            self.elements: list[list] = elements.elements
+            self.shape: Tuple[int, int] = elements.shape
             return
         if shape != None: 
             try:
                 n, m = shape
             except TypeError:
-                n = shape
+                n: int = shape
                 m = 1
             elements = _flatten(elements)
             if len(elements) != n * m:
@@ -31,22 +35,40 @@ class Matrix:
             for row in elements:
                 if len(row) != m:
                     raise ValueError("The shape of a matrix shall be rectangular. ")
-            self.elements = elements
+            self.elements: list[list] = elements
 
-        self.shape = (n, m)
+        self.shape: Tuple[int, int] = (n, m)
         return
 
-    def __getitem__(self, i):
+    def __getitem__(self, idx: Idx):
         try:
-            return self.elements[i[0]][i[1]]
+            i, j = idx
         except TypeError:
-            return self.elements[i]
+            return Matrix(self.elements[idx])
+        
+        if not isinstance(i, slice):
+            if isinstance(j, slice):
+                return Matrix(self.elements[i][j])
+            else:
+                return self.elements[i][j]
+        else:
+            if isinstance(j, slice):
+                return Matrix([row[j] for row in self.elements[i]])
+            else:
+                return Matrix([[row[j]] for row in self.elements[i]])
 
-    def __setitem__(self, i, item):
+    def __setitem__(self, idx: Idx, item):
         try:
-            self.elements[i[0]][i[1]] = item
+            i, j = idx
         except TypeError:
-            self.elements[i] = item
+            self.elements[idx] = item
+        
+        if not isinstance(i, slice):
+            self.elements[i][j] = item
+        else:
+            _, m = self.shape
+            for k in range(0, m)[i]:
+                self.elements[k][j] = item[k]
 
     def is_diag(self, error: float=EPS) -> bool:
         """Check if a matrix is a diagonal square matrix
@@ -85,35 +107,36 @@ class Matrix:
                 raise ValueError("Cannot convert a non-diagonal matrix into a float.")
         else:
             raise ValueError("Cannot convert a non-square matrix into a float.")
-
-    def __str__(self):
-        return str(self.elements)
     
     def __iter__(self):
         return iter(self.elements)
 
     def __add__(self, B):
-        A = self.elements
-        n = self.shape[0]
+        A = self
+        n, m = self.shape
         if type(B) == Matrix:
             if self.shape != B.shape:
                 raise ValueError("The shape of two matrices shall be the same.")
-            C = [list(map(add, A[i], B[i])) for i in range(n)]
+            C = []
+            for i in range(n):
+                C.append([A[i, j] + B[i, j] for j in range(m)])
         else:
-            C = [[a + B for a in A[i]] for i in range(n)]
+            C = []
+            for i in range(n):
+                C.append([A[i, j] + B for j in range(m)])
         return Matrix(C)
     
     def __radd__(self, B):
         return self + B
     
     def __sub__(self, B):
-        return self + (-1.) * B
+        return self + (-1) * B
 
     def __rsub__(self, B):
-        return B + (-1.) * self
+        return B + (-1) * self
 
     def __repr__(self):
-        return "({},{}) Matrix\n{}".format(*self.shape, str(self))
+        return "({},{}) Matrix\n{}".format(*self.shape, str(self.elements))
 
     def __eq__(self, B):
         return type(B) == Matrix and B.elements == self.elements
@@ -122,15 +145,17 @@ class Matrix:
         return Matrix([list(pair) for pair in zip(*self.elements)])
 
     def __mul__(self, B):
-        A = self.elements
+        A = self
         nA, mA = self.shape
         if type(B) == Matrix:
             nB, mB = B.shape
             if mA != nB:
                 raise ValueError("In order for A * B to make sense, the number of columns of A must be equal to the number of rows of B.")
-            C = [[sum(map(mul, A[i], B.T()[j])) for j in range(mB)] for i in range(nA)]
+            C = []
+            for i in range(nA):
+                C.append([sum(A[i, k] * B[k, j] for k in range(mA)) for j in range(mB)])
         else:
-            C = [list(map(lambda x: x * B, A[i])) for i in range(nA)]
+            C = [[A[i, j] * B for j in range(mA)] for i in range(nA)]
         return Matrix(C)
 
     def __rmul__(self, B):
@@ -217,7 +242,7 @@ class Matrix:
         return self.det() != 0
 
     def T(self):
-        return Matrix([list(row) for row in zip(*self)])
+        return Matrix([list(row) for row in zip(*self.elements)])
 
     def inverse(self): 
         n, m = self.shape
@@ -236,10 +261,10 @@ class Matrix:
                 K = A[i, j]
                 for l in range(j, 2*n):
                     A[i, l] -= K * A[j, l]
-        inversed = Matrix([row[n:] for row in A])
+        inversed = A[:, n:]
         return inversed
     
-    def __pow__(self, p):
+    def __pow__(self, p: int):
         n, m = self.shape
         if n != m:
             raise ValueError ("Cannot compute power for non-square matrix")
@@ -261,6 +286,9 @@ class Matrix:
                     result *= A2i
                 A2i **= 2 
         return result
+
+    def copy(self):
+        return Matrix([row.copy() for row in self.elements])
 
 def concatenate(A, B, vertical=False):
     n_A, m_A = A.shape
@@ -293,23 +321,126 @@ def eye(n):
     return I_n
 
 def zeros(n, m=1):
-    O_n = [[0.]* m for _ in range(n)]
+    O_n = [[0.] * m for _ in range(n)]
     return Matrix(O_n)
-
-def timeit(f, N=10000):
-    from time import time
-    t0 = time()
-    for _ in range(N):
-        f()
-    dt = time() - t0
-    print("total cost: {} ms, per loop: {} us".format(dt*1e3, dt/N * 1e6))
 
 def matrixify(func, *args, **kwargs):
     def Mfunc(A):
         if isinstance(A, Matrix):
-            n, _ = A.shape
-            A_func = [[func(a, *args, **kwargs) for a in A[i]] for i in range(n)]
+            n, m = A.shape
+            A_func = [[func(A[i, j], *args, **kwargs) for j in range(m)] for i in range(n)]
             return Matrix(A_func)
         else:
             return func(A)
-    return Mfunc 
+    return Mfunc
+
+def solve_linear(A: Matrix, b: Matrix) -> dict:
+    """Solve a linear system with equations Ax = b, where A is a Matrix and b is a vector (i.e. (n, 1) Matrix).
+
+    Args:
+        A (Matrix): a (m, n) Matrix
+        b (Matrix): a (m, 1) Matrix
+
+    Raises:
+        ValueError: raised when the shape of A and b cannot fit Ax = b
+
+    Returns:
+        sols (dict): a dict with keys "nonzero_sols_homo", "sol_inhomo" and "solable". 
+            sol["solable"] (bool): 
+                if the equations are solable.
+            sol["sol_inhomo"] (Matrix): 
+                a solution of the equations Ax = b. If not solable, then None.
+            sol["nonzere_sols_homo"] (list[Matrix]): 
+                a list of solutions of the equations Ax = 0. If not solable, then None.
+    """
+    n, m = A.shape
+    if (n, 1) != b.shape:
+        raise ValueError ("The shape of A and b shall fit the linear equations Ax = b.")
+    
+    def idx_first_non_empty(A: Matrix, i: int, j: int) -> Optional[int]:
+        """Find the index of the first element that is not empty in between A[i, j] and A[n-1, j].
+
+        Args:
+            i (int): starting row.
+            j (int): column.
+
+        Returns:
+            Optional[int]: the first row index of the non-zero element, if not found return None.
+        """
+        for k in range(i, n):
+            if A[i, j] != 0:
+                return k
+        return None
+
+    sol_cols = [] # col idx for cols that can't be triangulize
+    num_skipped_col = 0
+
+    Ab = concatenate(A, b)
+
+    sols = {
+        "nonzero_sols_homo" : None,
+        "sol_inhomo" : None,
+        "solable": False
+    }
+    
+
+    for j in range(m):
+        start_row = j - num_skipped_col
+        i = idx_first_non_empty(Ab, start_row, j) 
+        if i != None:
+            if i != start_row:
+                for l in range(j, m + 1):
+                    Ab[start_row, l] += Ab[i, j] # This is faster than exchanging two rows
+        else:
+            sol_cols.append(j) # A null column
+            num_skipped_col += 1
+            continue
+        
+        Ajj = Ab[start_row, j]
+        for l in range(j, m + 1):
+            Ab[start_row, l] /= Ajj
+
+        for i in range(n):
+            if i != start_row:
+                K = Ab[i, j]
+                for l in range(j, m + 1):
+                    Ab[i, l] -= K * Ab[start_row, l]
+
+    unit_cols = [] # col numbers for cols like [0, ..., 1, ...]
+    for j in range(m):
+        if j not in sol_cols:
+            unit_cols.append(j)
+
+    for k in range(num_skipped_col):
+        if abs(Ab[-k-1, -1]) > EPS:
+            return sols
+
+    nonzero_sols_homo = []
+    for j in sol_cols: # (label for free var, sol_col)
+        sol_homo_vec = [0.] * n
+        sol_homo_vec[j] = 1.
+        for i in unit_cols:
+            sol_homo_vec[i] = - Ab[i, j]
+        
+        nonzero_sols_homo.append(Matrix(sol_homo_vec, (n, 1)))
+    
+    sol_inhomo = [0.] * n
+    for k, i in enumerate(unit_cols):
+        sol_inhomo[i] = Ab[k, -1]
+    
+
+    if nonzero_sols_homo:
+        sols["nonzero_sols_homo"] = nonzero_sols_homo
+    else:
+        sols["nonzero_sols_homo"] = None
+    sols["sol_inhomo"] = Matrix(sol_inhomo, (n, 1))
+    sols["solable"] = True
+
+    return sols
+
+
+
+
+
+    
+    return 
