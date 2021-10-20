@@ -19,6 +19,28 @@ Output:
 [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 2.220446049250313e-16, -4.440892098500626e-16]]
 ```
 
+### System of Linear Equations
+```python
+A = Matrix([
+    [1, 2, 3, 1],
+    [1, 3, 4, 2],
+    [2, 7, 9, 3],
+    [3, 7, 10, 2]
+])
+b = Matrix([3, 2, 7, 12], (4, 1))
+sols = solve_linear(A, b)
+sols
+```
+Output: 
+```
+{'nonzero_sols_homo': [(4,1) Matrix
+  [[-1.0], [-1.0], [1.0], [-0.0]]],
+ 'sol_inhomo': (4,1) Matrix
+ [[3.0], [1.0], [0.0], [-2.0]],
+ 'solable': True}
+```
+
+
 ### Numerical Differentiation
 
 ```python
