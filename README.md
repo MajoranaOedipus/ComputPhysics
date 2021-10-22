@@ -102,13 +102,18 @@ Tool packages for other packages
 
 ### Interpolation
 * Lagrange interpolation (*finished*)
-* Hermit interpolation (**WIP**)
+* Hermit interpolation (*finished*)
 * Spline interpolation (**WIP**)
 * Maybe a class for result? (**WIP**)
 
 ### Numerical Differentiation
 * differentiation using central difference (*finished*)
 * adaptive steps (**WIP**)
+
+### Optimization
+* root finding (**WIP**)
+* local optimization (**WIP**)
+* ...
 
 ### Numerical Integration
 WIP
