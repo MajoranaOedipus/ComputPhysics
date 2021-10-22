@@ -1,5 +1,8 @@
+"""Basic numerical polynomial operations"""
+from itertools import islice
 
 class Polynomial:
+    """Polynomial class, with basic operations"""
     def __init__(self, factors: list):
         """generates a polynomial that satisfies y = factors[0] + x * factors[1] + ... + x**d * factors[d]
 
@@ -16,9 +19,11 @@ class Polynomial:
             self.factors = [0.]
 
     def __call__(self, x):
-        y = 0
-        for i, f in enumerate(self.factors):
-            y += x**i * f
+        """Using Qin Jiushao (秦九韶) method to evaluate the polynomial's value at x"""
+        factors = self.factors
+        y = factors[-1]
+        for f in islice(reversed(factors), 1, None):
+            y = x * y + f
         return y
 
     def __add__(self, P):
@@ -54,9 +59,22 @@ class Polynomial:
         return self * P
 
     def __repr__(self):
+        if self.factors[-1] == 0:
+            return "zero Polynomial\n0"
+
         factors = self.factors
-        poly_str = "{}".format(factors[0])
         for i, f in enumerate(factors):
+            if f != 0:
+                fst_idx_nonzero = i
+                break
+
+        poly_str = "{}".format(factors[fst_idx_nonzero])
+        if fst_idx_nonzero != 0:
+            poly_str += " X"
+            if fst_idx_nonzero != 1:
+                poly_str += "^{}".format(fst_idx_nonzero)
+
+        for i, f in islice(enumerate(factors), fst_idx_nonzero + 1, None):
             if i == 0 or f == 0:
                 continue
             if f < 0:

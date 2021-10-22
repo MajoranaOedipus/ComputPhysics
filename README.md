@@ -21,6 +21,7 @@ Output:
 
 ### System of Linear Equations
 ```python
+from ComputPhysics.LinearAlgebra import Matrix, solve_linear
 A = Matrix([
     [1, 2, 3, 1],
     [1, 3, 4, 2],
@@ -67,13 +68,16 @@ Output:
 
 ### Interpolation
 ```python
-from ComputPhysics.Interpolation import interpolate_Lagrange
-interpolate_Lagrange([3, 1, 2], [1, 2, 3])
+from ComputPhysics.Interpolation import interpolate_Lagrange, interpolate_Hermite
+print(interpolate_Lagrange([3, 1, 2], [1, 2, 3]),
+      interpolate_Hermite([0, 1], [[1, 0], [2, 2]]), sep="\n")
 ```
 Output:
 ```
 Polynomial of degree 2 
 -2.0 + 5.5 X - 1.5 X^2
+Polynomial of degree 2 
+1.0 + 1.0 X^2
 ```
 
 ## Projects

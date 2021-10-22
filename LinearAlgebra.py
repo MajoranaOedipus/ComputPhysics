@@ -1,19 +1,36 @@
+"""Matrix manipulation and system of linear equations"""
+# for type hints
+from typing import Optional, Union, Tuple
+Idx = Union[int, Tuple[Union[int, slice], Union[int, slice]]]
+Num = Union[int, float]
+
 from ._util import _flatten
 from ._const import EPS
 
-# for type hits
-from typing import Optional, Union, Tuple
-Idx = Union[int, Tuple[Union[int, slice], Union[int, slice]]]
-
-
 class Matrix:
-    def __init__(self, elements, 
+    """Matrix class with shape (m, n) and elements of 2D list
+    """
+    def __init__(self, elements: "Union[Matrix, list[list[Num]], list[Num]]",
                 shape: Union[int, Tuple[int, int], None] = None):
-        if type(elements) == Matrix:
+        """Generates a Matrix from elements and an optional shape.
+
+        Args:
+            elements (Union[Matrix, list[list], list]): 
+                when elements is not a Matrix and shape is not None, the elements shall fit the shape.
+            shape (Union[int, Tuple[int, int], None], optional): 
+                The shape of the matrix. Defaults to None. 
+
+        Raises:
+            ValueError "The number of the elements cannot fit the shape of the matrix": 
+                raised when elements is not a Matrix and it does not fit the shape.
+            ValueError "The shape of a matrix shall be rectangular. ": 
+                raised when shape is None and the elements is a list with sublists that have different lengths.
+        """
+        if isinstance(elements, Matrix):
             self.elements: list[list] = elements.elements
             self.shape: Tuple[int, int] = elements.shape
             return
-        if shape != None: 
+        if shape is not None:
             try:
                 n, m = shape
             except TypeError:
@@ -31,7 +48,7 @@ class Matrix:
                 self.shape = (1, n)
                 self.elements = [elements]
                 return
-            
+
             for row in elements:
                 if len(row) != m:
                     raise ValueError("The shape of a matrix shall be rectangular. ")
@@ -57,7 +74,7 @@ class Matrix:
             else:
                 return Matrix([[row[j]] for row in self.elements[i]])
 
-    def __setitem__(self, idx: Idx, item):
+    def __setitem__(self, idx: Idx, item: Num):
         try:
             i, j = idx
         except TypeError:
@@ -111,7 +128,7 @@ class Matrix:
     def __iter__(self):
         return iter(self.elements)
 
-    def __add__(self, B):
+    def __add__(self, B: Union["Matrix", Num]):
         A = self
         n, m = self.shape
         if type(B) == Matrix:
@@ -126,25 +143,25 @@ class Matrix:
                 C.append([A[i, j] + B for j in range(m)])
         return Matrix(C)
     
-    def __radd__(self, B):
+    def __radd__(self, B: Union["Matrix", Num]):
         return self + B
     
-    def __sub__(self, B):
+    def __sub__(self, B: Union["Matrix", Num]):
         return self + (-1) * B
 
-    def __rsub__(self, B):
+    def __rsub__(self, B: Union["Matrix", Num]):
         return B + (-1) * self
 
     def __repr__(self):
         return "({},{}) Matrix\n{}".format(*self.shape, str(self.elements))
 
-    def __eq__(self, B):
-        return type(B) == Matrix and B.elements == self.elements
+    def __eq__(self, B) -> bool:
+        return isinstance(B, Matrix) and B.elements == self.elements
 
-    def T(self):
+    def T(self) -> "Matrix":
         return Matrix([list(pair) for pair in zip(*self.elements)])
 
-    def __mul__(self, B):
+    def __mul__(self, B: Union["Matrix", Num]):
         A = self
         nA, mA = self.shape
         if type(B) == Matrix:
@@ -158,7 +175,7 @@ class Matrix:
             C = [[A[i, j] * B for j in range(mA)] for i in range(nA)]
         return Matrix(C)
 
-    def __rmul__(self, B):
+    def __rmul__(self, B: Union["Matrix", Num]):
         return self * B
 
     def det(self) -> float:
@@ -194,8 +211,10 @@ class Matrix:
             trace += self[i, i]
         return trace
 
-    def triangularize(self, pos="upper", bounds=None): # TODO: reimplement triangularization about bounds, make changes outside the bounds
-        if bounds == None:
+    def triangularize(self, pos: str = "upper", 
+                  bounds: Union[Tuple[int, int], None] = None): 
+    # TODO: reimplement triangularization about bounds, make changes outside the bounds
+        if bounds is None:
             row_l, col_l = 0, 0
             row_u, col_u = self.shape
         else:
@@ -238,13 +257,13 @@ class Matrix:
                     for l in range(*l_range_arg(j)):
                         A[i][l] -= K * A[j_row(j)][l]
 
-    def is_inversible(self):
+    def is_inversible(self) -> bool:
         return self.det() != 0
 
-    def T(self):
+    def T(self) -> "Matrix":
         return Matrix([list(row) for row in zip(*self.elements)])
 
-    def inverse(self): 
+    def inverse(self) -> "Matrix": 
         n, m = self.shape
         if n != m:
             raise ValueError ("Cannot compute inverse of a non-square matrix")
@@ -261,7 +280,7 @@ class Matrix:
                 K = A[i, j]
                 for l in range(j, 2*n):
                     A[i, l] -= K * A[j, l]
-        inversed = A[:, n:]
+        inversed: "Matrix" = A[:, n:]
         return inversed
     
     def __pow__(self, p: int):
@@ -290,7 +309,7 @@ class Matrix:
     def copy(self):
         return Matrix([row.copy() for row in self.elements])
 
-def concatenate(A, B, vertical=False):
+def concatenate(A: Matrix, B: Matrix, vertical: bool = False):
     n_A, m_A = A.shape
     n_B, m_B = A.shape
     if not vertical:
@@ -308,19 +327,20 @@ def concatenate(A, B, vertical=False):
         C = A + B
         return Matrix(C)
 
-def triangularize(A, pos="upper", bounds=None): 
+def triangularize(A: Matrix, pos: str = "upper", 
+                  bounds: Union[Tuple[int, int], None] = None): 
     A = Matrix([row.copy() for row in A.elements]) # Copy the matrix's elements
     A.triangularize(pos, bounds)
     return A
         
-def eye(n):
+def eye(n: int):
     O_n = zeros(n, n)
     for i in range(n):
         O_n[i, i] = 1.
     I_n = O_n
     return I_n
 
-def zeros(n, m=1):
+def zeros(n: int, m: int = 1):
     O_n = [[0.] * m for _ in range(n)]
     return Matrix(O_n)
 
@@ -387,7 +407,7 @@ def solve_linear(A: Matrix, b: Matrix) -> dict:
     for j in range(m):
         start_row = j - num_skipped_col
         i = idx_first_non_empty(Ab, start_row, j) 
-        if i != None:
+        if i is not None:
             if i != start_row:
                 for l in range(j, m + 1):
                     Ab[start_row, l] += Ab[i, j] # This is faster than exchanging two rows
