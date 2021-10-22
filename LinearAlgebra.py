@@ -457,10 +457,3 @@ def solve_linear(A: Matrix, b: Matrix) -> dict:
     sols["solable"] = True
 
     return sols
-
-
-
-
-
-    
-    return 
