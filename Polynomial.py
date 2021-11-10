@@ -108,6 +108,13 @@ class Polynomial:
 
 def zero_poly(type=int):
     return Polynomial([type(0)])
-        
+
+def polynomial_integrate(poly: Polynomial):
+    d = poly.d
+    int_poly_factors = poly.factors.copy()
+    int_poly_factors.insert(0, 0)
+    for i in range(2, d + 2):
+        int_poly_factors[i] /= i
+    return Polynomial(int_poly_factors)
         
 
