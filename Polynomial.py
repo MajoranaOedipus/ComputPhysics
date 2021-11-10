@@ -1,5 +1,6 @@
 """Basic numerical polynomial operations"""
 from itertools import islice
+from numbers import Complex, Real
 
 class Polynomial:
     """Polynomial class, with basic operations"""
@@ -68,7 +69,11 @@ class Polynomial:
                 fst_idx_nonzero = i
                 break
 
-        poly_str = "{}".format(factors[fst_idx_nonzero])
+        fst_factor = factors[fst_idx_nonzero]
+        if isinstance(fst_factor, Complex):
+            poly_str = "({})".format(fst_factor)
+        else:
+            poly_str = "{}".format(fst_factor)
         if fst_idx_nonzero != 0:
             poly_str += " X"
             if fst_idx_nonzero != 1:
@@ -77,15 +82,22 @@ class Polynomial:
         for i, f in islice(enumerate(factors), fst_idx_nonzero + 1, None):
             if i == 0 or f == 0:
                 continue
-            if f < 0:
+            if isinstance(f, Real) and f < 0:
                 sign = " - "
             else:
                 sign = " + "
             poly_str += sign
             if i == 1:
-                poly_str += "{} X".format(abs(f))
+                if isinstance(f, Complex):
+                    poly_str += "({}) X".format(f)
+                else:
+                    poly_str += "{} X".format(abs(f))
             else:
-                poly_str += "{} X^{}".format(abs(f), i)
+                if isinstance(f, Complex):
+                    poly_str += "({}) X^{}".format(f, i)
+                else:
+                    poly_str += "{} X^{}".format(abs(f), i)
+                
 
         return "Polynomial of degree {} \n".format(self.d) + poly_str
 

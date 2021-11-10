@@ -1,8 +1,8 @@
 """Matrix manipulation and system of linear equations"""
 # for type hints
 from typing import Optional, Union, Tuple
+from numbers import Number
 Idx = Union[int, Tuple[Union[int, slice], Union[int, slice]]]
-Num = Union[int, float]
 
 from ._util import _flatten
 from ._const import EPS
@@ -10,7 +10,7 @@ from ._const import EPS
 class Matrix:
     """Matrix class with shape (m, n) and elements of 2D list
     """
-    def __init__(self, elements: "Union[Matrix, list[list[Num]], list[Num]]",
+    def __init__(self, elements: "Union[Matrix, list[list[Number]], list[Number]]",
                 shape: Union[int, Tuple[int, int], None] = None):
         """Generates a Matrix from elements and an optional shape.
 
@@ -74,7 +74,7 @@ class Matrix:
             else:
                 return Matrix([[row[j]] for row in self.elements[i]])
 
-    def __setitem__(self, idx: Idx, item: Num):
+    def __setitem__(self, idx: Idx, item: Number):
         try:
             i, j = idx
         except TypeError:
@@ -128,7 +128,7 @@ class Matrix:
     def __iter__(self):
         return iter(self.elements)
 
-    def __add__(self, B: Union["Matrix", Num]):
+    def __add__(self, B: Union["Matrix", Number]):
         A = self
         n, m = self.shape
         if type(B) == Matrix:
@@ -143,13 +143,13 @@ class Matrix:
                 C.append([A[i, j] + B for j in range(m)])
         return Matrix(C)
     
-    def __radd__(self, B: Union["Matrix", Num]):
+    def __radd__(self, B: Union["Matrix", Number]):
         return self + B
     
-    def __sub__(self, B: Union["Matrix", Num]):
+    def __sub__(self, B: Union["Matrix", Number]):
         return self + (-1) * B
 
-    def __rsub__(self, B: Union["Matrix", Num]):
+    def __rsub__(self, B: Union["Matrix", Number]):
         return B + (-1) * self
 
     def __repr__(self):
@@ -161,7 +161,7 @@ class Matrix:
     def T(self) -> "Matrix":
         return Matrix([list(pair) for pair in zip(*self.elements)])
 
-    def __mul__(self, B: Union["Matrix", Num]):
+    def __mul__(self, B: Union["Matrix", Number]):
         A = self
         nA, mA = self.shape
         if type(B) == Matrix:
@@ -175,7 +175,7 @@ class Matrix:
             C = [[A[i, j] * B for j in range(mA)] for i in range(nA)]
         return Matrix(C)
 
-    def __rmul__(self, B: Union["Matrix", Num]):
+    def __rmul__(self, B: Union["Matrix", Number]):
         return self * B
 
     def det(self) -> float:

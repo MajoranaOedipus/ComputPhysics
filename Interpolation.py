@@ -2,15 +2,13 @@
     1D Interpolation
     interpolate_lagrange and interpolate_Hermite available now
 """
-from typing import Union
+from numbers import Number
 from math import factorial
 from itertools import islice
-from .Polynomial import Polynomial
+from .Polynomial import Polynomial, zero_poly
 
-Num = Union[float, int]
-
-def interpolate_Lagrange(xs: "list[Num]", ys: "list[Num]") -> Polynomial:
-    """return a polynomial interpolated with Lagrange method.
+def interpolate_Lagrange(xs: "list[Number]", ys: "list[Number]") -> Polynomial:
+    """return a Lagrange polynomial interpolated with Newton difference method.
 
     Args:
         xs (list[Num]): points
@@ -22,19 +20,17 @@ def interpolate_Lagrange(xs: "list[Num]", ys: "list[Num]") -> Polynomial:
     Returns:
         Polynomial: interpolated
     """
-    L = 0
+    div_table = div_diff(xs, ys)
     n = len(xs)
-    if len(ys) != n:
-        raise ValueError("The amount of points in xs and ys should be the same. ")
+    L = zero_poly()
     for j in range(n):
-        lj = 1
-        for i in range(n):
-            if i != j:
-                lj *= Polynomial([- xs[i], 1]) / (xs[j] - xs[i])
-        L += ys[j] * lj
+        Newton_term = Polynomial([div_table[j][0]])
+        for i in range(j):
+            Newton_term *= Polynomial([-xs[i], 1])
+        L += Newton_term
     return L
 
-def interpolate_Hermite(xs: "list[Num]", ys: "list[list[Num]]") -> Polynomial: 
+def interpolate_Hermite(xs: "list[Number]", ys: "list[list[Number]]") -> Polynomial: 
     """
     Return the Hermite interpolation of xs and ys
 
@@ -75,3 +71,27 @@ def interpolate_Hermite(xs: "list[Num]", ys: "list[list[Num]]") -> Polynomial:
         interpolated += f * term   # prod(x - zj) for j in range(k)
 
     return interpolated
+
+def div_diff(xs: "list[Number]", ys: "list[Number]"):
+    """
+    Generate a divided difference table iteratively for x and y points, 
+    where xs must be different.
+    """
+    n = len(xs)
+    if n != len(ys):
+        raise ValueError("xs and ys should be of same length.")
+
+    div_diff = [ys]
+    # div_diff[i][j] = f[z[j], ..., z[i+j]] for j in range(0, n*N-i)
+    # where z[j] := xs[j]
+    for i in range(1, n):
+        last_depth = div_diff[-1]
+        next_depth = []
+        for j in range(n - i):
+            diff = last_depth[j+1] - last_depth[j]
+            diff /= xs[i+j] - xs[j]
+            next_depth.append(diff)
+
+        div_diff.append(next_depth)
+
+    return div_diff
