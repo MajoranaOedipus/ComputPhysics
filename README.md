@@ -80,6 +80,26 @@ Polynomial of degree 2
 1.0 + 1.0 X^2
 ```
 
+## Integration
+```python
+from ComputPhysics.Integration import SUPPORTED_METHOD, quad
+
+def func(x):
+    return (x)**3
+
+N = 10
+for method in SUPPORTED_METHOD:
+    print(method+":", quad(func, 0, 1, method=method))
+```
+Output:
+```
+Romberg: 0.25
+Newton-Cotes: 0.2500000000000001
+midpoint: 0.2487375000000001
+trapezoid: 0.25250000000000006
+Simpson: 0.25
+```
+
 ## Projects
 ### Linear Algebra
 Numerical matrix manipulation and linear systems
@@ -98,28 +118,33 @@ Tool packages for other packages
 * Called as a function (*finished*)
 * Euclidean division, modulus (**WIP**)
 * Find roots (**WIP**)
-* More generic (**works required...**)
 
 ### Interpolation
 * Lagrange interpolation (*finished*)
 * Hermit interpolation (*finished*)
 * Spline interpolation (**WIP**)
-* Maybe a class for result? (**WIP**)
 
 ### Numerical Differentiation
-* differentiation using central difference (*finished*)
-* adaptive steps (**WIP**)
+* Differentiation using central difference (*finished*)
+* Adaptive steps (**WIP**)
+
+### Numerical Integration
+* Now supported method: Romberg, Newton-Cotes, midpoint, trapezoid, Simpson (*finished*)
+* User interface `quad` (*finished*)
+* Adaptive steps (**WIP**)
+
+### ODE
+* Euler (eplicit and implicit) method (**WIP**)
+* ...
+
+### PDE
+WIP
 
 ### Optimization
 * root finding (**WIP**)
 * local optimization (**WIP**)
 * ...
-
-### Numerical Integration
-WIP
 ### FFT
-WIP
-### ODE
 WIP
 ### Basic Probability and Statistic
 WIP
