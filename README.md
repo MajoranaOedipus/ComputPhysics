@@ -134,7 +134,8 @@ Tool packages for other packages
 * Adaptive steps (**WIP**)
 
 ### ODE
-* Euler (eplicit and implicit) method (**WIP**)
+* Euler (eplicit) method (*finished*)
+* Euler (explicit) method (**WIP**)
 * ...
 
 ### PDE

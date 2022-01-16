@@ -1,6 +1,12 @@
 """Basic numerical polynomial operations"""
 from itertools import islice
 from numbers import Complex, Real
+from math import factorial
+from typing import Union
+
+# from types import NotImplementedType only supported by python3.10+, 
+# which is not implemented by pypy yet
+NotImplementedType = type(NotImplemented)   
 
 class Polynomial:
     """Polynomial class, with basic operations"""
@@ -58,6 +64,25 @@ class Polynomial:
 
     def __rmul__(self, P):
         return self * P
+
+    def __pow__(self, p: int) -> Union["Polynomial", NotImplementedType]: 
+        if p < 0:
+            return NotImplemented
+        elif p == 0:
+            return Polynomial([1])
+        elif p < 16:
+            result = self
+            for _ in range(p-1):
+                result *= self
+        else:
+            result = 1
+            gen_bin = (int(i) for i in bin(p)[2:])
+            A2i = self
+            for bi in gen_bin:
+                if bi == 1:
+                    result *= A2i
+                A2i **= 2 
+        return result
 
     def __repr__(self):
         if self.factors[-1] == 0:
@@ -129,4 +154,15 @@ def polynomial_integrate(poly: Polynomial):
         int_poly_factors[i] /= i
     return Polynomial(int_poly_factors)
         
+def Legendre(n):
+    """Orthogonal polynomials in [-1, 1]
+
+    Args:
+        n ([type]): the degree of the polynomials (\in \mathbb N)
+
+    Returns:
+        Polynomial
+    """
+    p = (Polynomial([-1, 0, 1])) ** n
+    return p.diff(n=n) / (2**n * factorial(n))
 

@@ -178,6 +178,11 @@ class Matrix:
     def __rmul__(self, B: Union["Matrix", Number]):
         return self * B
 
+    def __truediv__(self, b: Number) -> "Matrix":
+        n, m = self.shape
+        C = [[self[i, j] / b for j in range(m)] for i in range(n)]
+        return Matrix(C)
+
     def det(self) -> float:
         n, m = self.shape
         if n != m:
@@ -289,8 +294,7 @@ class Matrix:
             raise ValueError ("Cannot compute power for non-square matrix")
         
         if p > 0:
-            A = self
-        else:
+            A = selfX
             A = self.inverse()
             p = -p
         result = eye(n)
