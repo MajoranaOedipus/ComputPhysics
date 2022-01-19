@@ -1,6 +1,5 @@
 """Matrix manipulation and system of linear equations"""
 # for type hints
-from types import NoneType
 from typing import Any, Callable, Generic, List, Optional, TypeVar, Union, Tuple, overload
 from numbers import Number
 Idx = Union[int, Tuple[Union[int, slice], Union[int, slice]]]
@@ -15,7 +14,7 @@ class Matrix(Generic[Num]):
     """
     def __init__(self, 
         elements: "Union[Matrix[Num], List[List[Num]], List[Num]]",
-        shape: Union[int, Tuple[int, int], NoneType] = None) -> None:   #TODO: create a better user interface for this
+        shape: Union[int, Tuple[int, int], None] = None) -> None:   #TODO: create a better user interface for this
         """Generates a Matrix from elements and an optional shape.
 
         Args:
