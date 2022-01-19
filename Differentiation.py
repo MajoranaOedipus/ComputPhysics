@@ -1,7 +1,9 @@
+from numbers import Number
+from typing import Any, Callable, List, Optional, TypeVar
 from .LinearAlgebra import Matrix, concatenate, zeros, matrixify
 from math import factorial
 
-def central_diff_weights(Np: int, ndiv: int=1):
+def central_diff_weights(Np: int, ndiv: int = 1) -> List[float]:
     if Np < ndiv + 1:
         raise ValueError("Number of points must be at least the derivative order + 1.")
     if Np % 2 == 0:
@@ -18,7 +20,8 @@ def central_diff_weights(Np: int, ndiv: int=1):
     weights = weights.elements[0]
     return weights
 
-def diff_f(f, dx: float = 1.0, n: int = 1, order: int = 3, *args, **kwargs):
+
+def diff_f(f: Callable[[Number, Optional[Any]], Number], dx: float = 1.0, n: int = 1, order: int = 3, *args, **kwargs) -> Callable[[float], float]:
     if order < n + 1:
         raise ValueError("'order' (the number of points used to compute the derivative), " + "must be at least the derivative order 'n' + 1.")
     if order % 2 == 0:
@@ -26,7 +29,7 @@ def diff_f(f, dx: float = 1.0, n: int = 1, order: int = 3, *args, **kwargs):
     f_prime = None
     weights = central_diff_weights(order, n)
 
-    def f_prime(x0: float):
+    def f_prime(x0: float) -> float:
         f_diff = 0.
         n_h = order // 2
         for i, w in enumerate(weights):
@@ -36,6 +39,9 @@ def diff_f(f, dx: float = 1.0, n: int = 1, order: int = 3, *args, **kwargs):
 
     return f_prime
 
-def diff(f, x0, dx=1.0, n=1, order=3, *args, **kwargs):
+def diff(
+    f: Callable[[Number, Optional[Any]], Number], 
+    x0: float, dx: float = 1.0, n: int = 1, order: int = 3, 
+    *args, **kwargs) -> float:
     f_diff = diff_f(f, dx, n, order, *args, **kwargs)(x0)
     return f_diff

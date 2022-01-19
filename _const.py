@@ -1,1 +1,1 @@
-EPS = abs(7./3 - 4./3 - 1) # Machine error
+_EPS = abs(7./3 - 4./3 - 1) # Machine error
