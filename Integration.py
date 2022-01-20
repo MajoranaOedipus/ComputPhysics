@@ -4,7 +4,7 @@ from .Interpolation import interpolate_Lagrange
 from .Polynomial import polynomial_integrate
 from numbers import Integral, Number
 
-SUPPORTED_METHOD = (
+SUPPORTED_METHODS = (
     "Romberg",
     "Newton-Cotes",
     "midpoint",
@@ -39,7 +39,7 @@ def quad(f: Callable[[Number], Number], a: Number, b: Number, method: str = "Rom
     elif method == "simpson":
         return Simpson(f, a, b, *args, **kwargs)
     else:
-        raise ValueError("Unkown method: {}. Must be one of the {}".format(method, SUPPORTED_METHOD))
+        raise ValueError("Unkown method: {}. Must be one of the {}".format(method, SUPPORTED_METHODS))
 
 
 
