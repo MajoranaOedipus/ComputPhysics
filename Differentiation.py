@@ -21,7 +21,7 @@ def central_diff_weights(Np: int, ndiv: int = 1) -> List[float]:
     return weights
 
 
-def diff_f(f: Callable[[Number, Optional[Any]], Number], dx: float = 1.0, n: int = 1, order: int = 3, *args, **kwargs) -> Callable[[float], float]:
+def diff_f(f: Callable[[Number, Optional[Any]], Number], dx: float = 1.0, n: int = 1, order: int = 3, args: tuple = (), **kwargs) -> Callable[[float], float]:
     if order < n + 1:
         raise ValueError("'order' (the number of points used to compute the derivative), " + "must be at least the derivative order 'n' + 1.")
     if order % 2 == 0:
@@ -42,6 +42,6 @@ def diff_f(f: Callable[[Number, Optional[Any]], Number], dx: float = 1.0, n: int
 def diff(
     f: Callable[[Number, Optional[Any]], Number], 
     x0: float, dx: float = 1.0, n: int = 1, order: int = 3, 
-    *args, **kwargs) -> float:
-    f_diff = diff_f(f, dx, n, order, *args, **kwargs)(x0)
+    args = (), **kwargs) -> float:
+    f_diff = diff_f(f, dx, n, order, args, **kwargs)(x0)
     return f_diff
