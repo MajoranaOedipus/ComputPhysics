@@ -1,7 +1,10 @@
-from numbers import Number
+from importlib.metadata import entry_points
+from numbers import Number, Real
 from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union, Literal
 
-T = TypeVar("T", bound=Number)
+from numpy import isin
+
+T = TypeVar("T", bound=Real)
 Y = TypeVar("Y", Number, List[Number])
 
 Func = Callable[[T, Y, Any], Y]
@@ -180,6 +183,233 @@ def RK_array_explicit(a: List[List[Number]], b: List[Number], c: List[Number]) -
             next_y = [y_k + sum(s_i[k] * b_i for b_i, s_i in zip(b, s)) * dt for k, y_k in enumerate(y)]
         return next_y
     return next_y_RK
+
+def solve_IVP_RK23(
+    f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
+    dt: T = 1e-3, TOL: Y = 1e-6, 
+    args: Tuple[Any] = ()) -> Tuple[List[T], List[Y]]:
+    """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
+        using RK2/3 (embedded RK pair).
+
+    TypeVars:
+        T = TypeVar("T", bound=Number)
+        Y = TypeVar("Y", Number, List[Number])
+        Func = (T, Y, Any) -> Y
+    Args:
+        f (Func[T, Y], Y]): The function f in y' = f(t, y), 
+            with first parametre one be the parametre of the system 
+            and the second be a number or a list of number representing the function value.
+        y0 (Y, optional): Initial value y(t_0). Defaults to 0.
+        bounds (Tuple[T, T], optional): The range of parametres of the system. Defaults to (0, 1).
+        N (int, optional): The number of steps in the given bounds. Defaults to 100.
+        args (Tuple[Any], optional): Additional args to be passed to f. Defaults to ().
+
+    Returns:
+        Tuple[List[T], List[Y]]: (ts, ys) 
+    """
+    y = y0
+    t, t_end = bounds
+    retry = False   # is it the second time to rechoose dt?
+    y_output = [y0]
+    t_output = [t]
+    if isinstance(y, Number):
+        while t < t_end:
+            s1 = f(t, y, *args)
+            s2 = f(t + dt, y + s1 * dt, *args)
+            s3 = f(t + dt/2, y + 1/4 * (s1 + s2) * dt, *args)
+            if y:
+                error_y_rel = abs(dt/3 * (s1 - 2 * s3 + s2)) / y    # |next_y(RK3) - next_y(RK2)| / y
+            else:
+                error_y_rel = abs(dt/3 * (s1 - 2 * s3 + s2))    # |next_y(RK3) - next_y(RK2)|
+
+            if error_y_rel < TOL:
+                if t + dt > t_end:
+                    dt = t_end - t
+                    continue
+                t += dt
+                t_output.append(t)
+                y += dt/6 * (s1 + s2 + 4*s3)    # RK3
+                dt = _next_dt(dt, error_y_rel, 2, TOL)
+                y_output.append(y)
+                retry = False
+            else:
+                if retry:
+                    dt /= 2
+                else:
+                    dt = _next_dt(dt, error_y_rel, 2, TOL)
+                    retry = True
+    else:
+        while t < t_end:
+            s1 = f(t, y, *args)
+            s2 = f(t + dt, [y_i + s1[i] * dt for i, y_i in enumerate(y)], *args)
+            s3 = f(t + dt/2, [y_i + 1/4 * (s1[i] + s2[i]) * dt for i, y_i in enumerate(y)], *args)
+            error_y = dt/3 * sum(
+                (s1_i - 2 * s3_i + s2_i) ** 2 
+                    for s1_i, s2_i, s3_i in zip(s1, s2, s3)) ** 0.5    # |next_y(RK3) - next_y(RK2)|
+            if y:
+                error_y_rel =  error_y / sum(y_i**2 for y_i in y) ** 0.5    # |next_y(RK3) - next_y(RK2)| / y
+            else:
+                error_y_rel = error_y
+
+            if error_y_rel < TOL:
+                if t + dt > t_end:
+                    dt = t_end - t
+                    continue
+                t += dt
+                t_output.append(t)
+                next_y = []
+                for i, y_i in enumerate(y):
+                    next_y.append(y_i +  dt/6 * (s1[i] + s2[i] + 4*s3[i]))   # RK3
+                y_output.append(next_y)
+                dt = _next_dt(dt, error_y_rel, 2, TOL)
+                y = next_y
+                retry = False
+            else:
+                if retry:
+                    dt /= 2
+                else:
+                    dt = _next_dt(dt, error_y_rel, 2, TOL)
+                    retry = True
+        
+    return t_output, y_output
+
+def solve_IVP_RKF45(
+    f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
+    dt: T = 1e-3, TOL: Y = 1e-6, 
+    args: Tuple[Any] = ()) -> Tuple[List[T], List[Y]]:
+    """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
+        using RKF4/5 (embedded RK pair).
+
+    TypeVars:
+        T = TypeVar("T", bound=Number)
+        Y = TypeVar("Y", Number, List[Number])
+        Func = (T, Y, Any) -> Y
+    Args:
+        f (Func[T, Y], Y]): The function f in y' = f(t, y), 
+            with first parametre one be the parametre of the system 
+            and the second be a number or a list of number representing the function value.
+        y0 (Y, optional): Initial value y(t_0). Defaults to 0.
+        bounds (Tuple[T, T], optional): The range of parametres of the system. Defaults to (0, 1).
+        N (int, optional): The number of steps in the given bounds. Defaults to 100.
+        args (Tuple[Any], optional): Additional args to be passed to f. Defaults to ().
+
+    Returns:
+        Tuple[List[T], List[Y]]: (ts, ys) 
+    """
+    y = y0
+    t, t_end = bounds
+    retry = False   # is it the second time to rechoose dt?
+    y_output = [y0]
+    t_output = [t]
+    if isinstance(y, Number):
+        while t < t_end:
+            s1 = f(t, y, *args)
+            s2 = f(t + dt/4, y + s1 * dt/4, *args)
+            s3 = f(t + 3*dt/8, y + dt/32 * (3 * s1 + 9 * s2), *args)
+            s4 = f(t + 12/13 * dt, y + dt/2197 * (1932 * s1 - 7200 * s2 + 7296 * s3), *args)
+            s5 = f(t + dt, y + dt * (439/216 * s1 - 8 * s2 + 3680/513 * s3 - 845/4104 * s4), *args)
+            s6 = f(
+                t + dt/2, 
+                y + dt * (-8/27 * s1 + 2 * s2 - 3544/2565 * s3 + 1859/4104 * s4 - 11/40 * s5),
+                *args)
+            error_y = abs(dt * (s1/360 - 128/4275 * s3 
+                                - 2197/75_240 * s4 + s5 / 50 + 2/55 * s6))  # |next_y(RK5) - next_y(RK4)|
+            if y:
+                error_y_rel = error_y / y    # |next_y(RK5) - next_y(RK4)| / y
+            else:
+                error_y_rel = error_y 
+
+            if error_y_rel < TOL:
+                if t + dt > t_end:
+                    dt = t_end - t
+                    continue
+                t += dt
+                t_output.append(t)
+                y += dt * (16/135 * s1 + 6656/12_825 * s3 + 28_561/56_430 * s4 - 9/50 * s5 + 2/55 * s6)    # RK5
+                dt = _next_dt(dt, error_y_rel, 4, TOL)
+                y_output.append(y)
+                retry = False
+            else:
+                if retry:
+                    dt /= 2
+                else:
+                    dt = _next_dt(dt, error_y_rel, 4, TOL)
+                    retry = True
+    else:
+        while t < t_end:
+            s1 = f(t, y, *args)
+            s2 = f(
+                t + dt/4, 
+                [y_i + s1[i] * dt/4 for i, y_i in enumerate(y)], 
+                *args)
+            s3 = f(
+                t + 3*dt/8, 
+                [y_i + dt/32 * (3 * s1[i] + 9 * s2[i]) for i, y_i in enumerate(y)], 
+                *args)
+            s4 = f(
+                t + 12/13 * dt, 
+                [y_i + dt/2197 * (1932 * s1[i] - 7200 * s2[i] + 7296 * s3[i]) 
+                    for i, y_i in enumerate(y)], 
+                *args)
+            s5 = f(
+                t + dt, 
+                [y_i + dt * (439/216 * s1[i] - 8 * s2[i] + 3680/513 * s3[i] - 845/4104 * s4[i])
+                    for i, y_i in enumerate(y)], 
+                *args)
+            s6 = f(
+                t + dt/2, 
+                [y_i + dt * (-8/27 * s1[i] + 2 * s2[i] - 3544/2565 * s3[i] + 1859/4104 * s4[i] - 11/40 * s5[i])
+                    for i, y_i in enumerate(y)],
+                *args)
+            error_y = dt * sum(
+                (s1_i/360 - 128/4275 * s3_i
+                    - 2197/75_240 * s4_i + s5_i / 50 + 2/55 * s6_i)**2 
+                        for s1_i, s3_i, s4_i, s5_i, s6_i 
+                            in zip(s1, s3, s4, s5, s6)) ** 0.5  # |next_y(RK5) - next_y(RK4)|
+            y_length = sum(y_i**2 for y_i in y) ** 0.5
+            if y_length:
+                error_y_rel = error_y / sum(y_i**2 for y_i in y) ** 0.5    # |next_y(RK5) - next_y(RK4)| / y
+            else:
+                error_y_rel = error_y   
+
+            if error_y_rel < TOL:
+                if t + dt > t_end:
+                    dt = t_end - t
+                    continue
+                t += dt
+                t_output.append(t)
+                
+                next_y = []
+                for i, y_i in enumerate(y):
+                    next_y.append(y_i + dt * (16/135 * s1[i] + 6656/12_825 * s3[i] 
+                                    + 28_561/56_430 * s4[i] - 9/50 * s5[i] + 2/55 * s6[i]))    # RK5
+                dt = _next_dt(dt, error_y_rel, 4, TOL)
+                y_output.append(next_y)
+                y = next_y
+                retry = False
+            else:
+                if retry:
+                    dt /= 2
+                else:
+                    dt = _next_dt(dt, error_y_rel, 4, TOL)
+                    retry = True
+        
+    return t_output, y_output
+
+def _next_dt(dt: T, error_rel: Y, p: int, TOL: Y) -> T:
+    """Generate next dt in RK embedded pair
+
+    Args:
+        dt (T): The last dt
+        error_rel (Y): estimated relative error
+        p (int): the order of the solver
+        TOL (T): tolerance
+
+    Returns:
+        T: next dt
+    """
+    K = 0.8 * (TOL /error_rel)**(1/(p + 1))
+    return K * dt
 
 SUPPORTED_METHODS = [
     "Euler",

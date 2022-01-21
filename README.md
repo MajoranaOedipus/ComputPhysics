@@ -100,6 +100,101 @@ trapezoid: 0.25250000000000006
 Simpson: 0.25
 ```
 
+## Root-finding
+
+```python
+from ComputPhysics.Optimisation import *
+Nmax = 10
+x0_bin = solve_binary(cos, 1, 2, Nmax=Nmax)
+x0_iter = solve_iter(cos, 1, Nmax=Nmax)
+x0_Newton = solve_Newton(cos, 1, Nmax=Nmax)
+x0_secant = solve_secant(cos, 0, 1, Nmax=Nmax)
+x0_regula_falsi = solve_regula_falsi(cos, 0, 1, Nmax=Nmax)
+
+print(f"bin          : x_0 = {x0_bin}, where f(x_0) = {cos(x0_bin)}")
+print(f"iter         : x_0 = {x0_iter}, where f(x_0) = {cos(x0_iter)}")
+print(f"Newton       : x_0 = {x0_Newton}, where f(x_0) = {cos(x0_Newton)}")
+print(f"secant       : x_0 = {x0_secant}, where f(x_0) = {cos(x0_secant)}")
+print(f"regula falsi : x_0 = {x0_regula_falsi}, where f(x_0) = {cos(x0_regula_falsi)}")
+```
+
+Output:
+```
+bin          : x_0 = 1.5712890625, where f(x_0) = -0.0004927356851649559
+iter         : x_0 = 1.5707963267948966, where f(x_0) = 6.123233995736766e-17
+Newton       : x_0 = 1.5707963267948966, where f(x_0) = 6.123233995736766e-17
+secant       : x_0 = 1.5707963267948966, where f(x_0) = 6.123233995736766e-17
+regula falsi : x_0 = 1.5707963267948966, where f(x_0) = 6.123233995736766e-17
+```
+
+## ODE
+```Python
+from ComputPhysics.ODE import *
+def f(t, y):
+    return y + t
+
+def y(t):
+    return exp(t) - t - 1
+
+y0 = 0
+N = 10
+y_solve_Euler = solve_IVP_explicit(f, y0, N=N, method="Euler")
+y_solve_trap = solve_IVP_explicit(f, y0, N=N, method="trapezoid")
+y_solve_mid = solve_IVP_explicit(f, y0, N=N, method="midpoint")
+y_solve_RK4 = solve_IVP_explicit(f, y0, N=N, method="RK4")
+y_solve_RK4_2 = solve_IVP_explicit(f, y0, N=N, method=RK_array_explicit(
+    [
+        [1/2], 
+        [0, 1/2], 
+        [0, 0, 1]
+    ], 
+    [1/6, 1/3, 1/3, 1/6], 
+    [1/2, 1/2, 1]
+    )) 
+
+y_exact = [y(i/N) for i in range(N)]
+difference_Euler = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_Euler, y_exact)) / N) ** 0.5
+difference_trap = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_trap, y_exact)) / N) ** 0.5
+difference_mid = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_mid, y_exact)) / N) ** 0.5
+difference_RK4 = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_RK4, y_exact)) / N) ** 0.5
+difference_RK4_2 = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_RK4_2, y_exact)) / N) ** 0.5
+```
+
+Output:
+```
+Euler: 51.552760906E-3
+trap : 1.729840013E-3
+mid  : 1.729840013E-3
+RK4  : 0.000858108E-3
+RK4-2: 0.000858108E-3
+```
+
+```Python
+from ComputPhysics.ODE import solve_IVP_RK23, solve_IVP_RKF45
+from math import sin
+
+def g(t, ys):
+    y1, y2 = ys
+    return [y2 * sin(t), -10]
+
+ys_0 = [0, 10]
+bounds = [0, 4]
+ts_RK23, ys_RK23 = solve_IVP_RK23(g, ys_0, bounds=bounds, TOL=1e-6)
+ts_RKF45, ys_RKF45 = solve_IVP_RKF45(g, ys_0, bounds=bounds, TOL=1e-6)
+len(ts_RK23), ts_RK45, ys_RK45
+```
+
+Output:
+```
+(15,
+ [0, 0.001, 2.100545200327771, 4.0],
+ [[0, 10],
+  [4.996666250333349e-06, 9.99],
+  [-4.116118414748008, -11.005452003277712],
+  [-1.9838284731989457, -30.0]])
+
+```
+
 ## Projects
 ### Linear Algebra
 Numerical matrix manipulation and linear systems
@@ -134,8 +229,11 @@ Tool packages for other packages
 * Adaptive steps (**WIP**)
 
 ### ODE
+#### IVP:
 * Euler (eplicit) method (*finished*)
-* Euler (explicit) method (**WIP**)
+* Midpoint, trapzoid (*finished*)
+* RK4 (*finished*)
+* RK2/3, RKF4/5 (*finished*)
 * ...
 
 ### PDE
