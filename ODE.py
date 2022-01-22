@@ -1,8 +1,5 @@
-from importlib.metadata import entry_points
 from numbers import Number, Real
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union, Literal
-
-from numpy import isin
+from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 T = TypeVar("T", bound=Real)
 Y = TypeVar("Y", Number, List[Number])
@@ -186,7 +183,7 @@ def RK_array_explicit(a: List[List[Number]], b: List[Number], c: List[Number]) -
 
 def solve_IVP_RK23(
     f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
-    dt: T = 1e-3, TOL: Y = 1e-6, 
+    dt: T = 1e-3, TOL: Y = 1e-6, dt_max: Optional[T] = None,
     args: Tuple[Any] = ()) -> Tuple[List[T], List[Y]]:
     """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
         using RK2/3 (embedded RK pair).
@@ -229,14 +226,14 @@ def solve_IVP_RK23(
                 t += dt
                 t_output.append(t)
                 y += dt/6 * (s1 + s2 + 4*s3)    # RK3
-                dt = _next_dt(dt, error_y_rel, 2, TOL)
+                dt = _next_dt(dt, error_y_rel, 2, TOL, dt_max)
                 y_output.append(y)
                 retry = False
             else:
                 if retry:
                     dt /= 2
                 else:
-                    dt = _next_dt(dt, error_y_rel, 2, TOL)
+                    dt = _next_dt(dt, error_y_rel, 2, TOL, dt_max)
                     retry = True
     else:
         while t < t_end:
@@ -261,21 +258,21 @@ def solve_IVP_RK23(
                 for i, y_i in enumerate(y):
                     next_y.append(y_i +  dt/6 * (s1[i] + s2[i] + 4*s3[i]))   # RK3
                 y_output.append(next_y)
-                dt = _next_dt(dt, error_y_rel, 2, TOL)
+                dt = _next_dt(dt, error_y_rel, 2, TOL, dt_max)
                 y = next_y
                 retry = False
             else:
                 if retry:
                     dt /= 2
                 else:
-                    dt = _next_dt(dt, error_y_rel, 2, TOL)
+                    dt = _next_dt(dt, error_y_rel, 2, TOL, dt_max)
                     retry = True
         
     return t_output, y_output
 
 def solve_IVP_RKF45(
     f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
-    dt: T = 1e-3, TOL: Y = 1e-6, 
+    dt: T = 1e-3, TOL: Y = 1e-6, dt_max: Optional[T] = None,
     args: Tuple[Any] = ()) -> Tuple[List[T], List[Y]]:
     """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
         using RKF4/5 (embedded RK pair).
@@ -326,14 +323,14 @@ def solve_IVP_RKF45(
                 t += dt
                 t_output.append(t)
                 y += dt * (16/135 * s1 + 6656/12_825 * s3 + 28_561/56_430 * s4 - 9/50 * s5 + 2/55 * s6)    # RK5
-                dt = _next_dt(dt, error_y_rel, 4, TOL)
+                dt = _next_dt(dt, error_y_rel, 4, TOL, dt_max)
                 y_output.append(y)
                 retry = False
             else:
                 if retry:
                     dt /= 2
                 else:
-                    dt = _next_dt(dt, error_y_rel, 4, TOL)
+                    dt = _next_dt(dt, error_y_rel, 4, TOL, dt_max)
                     retry = True
     else:
         while t < t_end:
@@ -383,7 +380,7 @@ def solve_IVP_RKF45(
                 for i, y_i in enumerate(y):
                     next_y.append(y_i + dt * (16/135 * s1[i] + 6656/12_825 * s3[i] 
                                     + 28_561/56_430 * s4[i] - 9/50 * s5[i] + 2/55 * s6[i]))    # RK5
-                dt = _next_dt(dt, error_y_rel, 4, TOL)
+                dt = _next_dt(dt, error_y_rel, 4, TOL, dt_max)
                 y_output.append(next_y)
                 y = next_y
                 retry = False
@@ -391,12 +388,12 @@ def solve_IVP_RKF45(
                 if retry:
                     dt /= 2
                 else:
-                    dt = _next_dt(dt, error_y_rel, 4, TOL)
+                    dt = _next_dt(dt, error_y_rel, 4, TOL, dt_max)
                     retry = True
         
     return t_output, y_output
 
-def _next_dt(dt: T, error_rel: Y, p: int, TOL: Y) -> T:
+def _next_dt(dt: T, error_rel: Y, p: int, TOL: Y, dt_max: Optional[T] = None) -> T:
     """Generate next dt in RK embedded pair
 
     Args:
@@ -409,7 +406,10 @@ def _next_dt(dt: T, error_rel: Y, p: int, TOL: Y) -> T:
         T: next dt
     """
     K = 0.8 * (TOL /error_rel)**(1/(p + 1))
-    return K * dt
+    if dt_max is None:
+        return K * dt
+    else:
+        min((dt_max, K))
 
 SUPPORTED_METHODS = [
     "Euler",
