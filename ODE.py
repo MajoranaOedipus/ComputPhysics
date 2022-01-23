@@ -15,7 +15,7 @@ Func = Callable[[T, Y, Any], Y]
 def solve_IVP_explicit(
     f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
     method: Union[str, Callable[[Func[T, Y], T, T, Y, Any], Y]] = "Euler", 
-    N: int = 100, args: Tuple[Any] = ()) -> List[Y]:
+    N: int = 100, endpoint = True, args: Tuple[Any] = ()) -> List[Y]:
     """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
         using the given explicit method， with constant step (b - a)/N.
 
@@ -35,7 +35,7 @@ def solve_IVP_explicit(
         args (Tuple[Any], optional): Additional args to be passed to f. Defaults to ().
 
     Returns:
-        List[Y]: A list of values of the solved function at t_i := t_0 + i * stepsize, for i in N
+        List[Y]: A list of values of the solved function at t_i := t_0 + i * stepsize, for i in (if endpoint then N + 1 else N)
     """
     output = [y0]
     t_0, t_N = bounds
@@ -50,6 +50,9 @@ def solve_IVP_explicit(
     else:
         next_y = method
 
+    if endpoint:
+        N += 1
+        
     for i in range(N-1):
         t_i: T = i * dt + t_0
         y_i = output[-1]

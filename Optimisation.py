@@ -8,7 +8,7 @@ X = TypeVar("X", bound=Number)
 Y = TypeVar("Y", bound=Number)
 
 def solve_binary(
-    f: Callable[[X], Y], a: X = 0, b: X = 0, 
+    f: Callable[[X], Y], a: X = 0, b: X = 1, 
     TOL: float = 0, Nmax: int = 100, 
     *args) -> X:
     """Solve f(x) = 0 with binary search
