@@ -246,8 +246,9 @@ def solve_IVP_RK23(
             error_y = dt/3 * sum(
                 (s1_i - 2 * s3_i + s2_i) ** 2 
                     for s1_i, s2_i, s3_i in zip(s1, s2, s3)) ** 0.5    # |next_y(RK3) - next_y(RK2)|
-            if y:
-                error_y_rel =  error_y / sum(y_i**2 for y_i in y) ** 0.5    # |next_y(RK3) - next_y(RK2)| / y
+            y_length = sum(y_i**2 for y_i in y) ** 0.5
+            if y_length:
+                error_y_rel =  error_y / y_length   # |next_y(RK3) - next_y(RK2)| / y
             else:
                 error_y_rel = error_y
 
