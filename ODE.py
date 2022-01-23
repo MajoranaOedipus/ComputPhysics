@@ -52,7 +52,7 @@ def solve_IVP_explicit(
 
     if endpoint:
         N += 1
-        
+
     for i in range(N-1):
         t_i: T = i * dt + t_0
         y_i = output[-1]
@@ -64,7 +64,7 @@ def _next_y_Euler(f: Func[T, Y], dt: T, t: T, y: Y, *args)  -> Y:
     if isinstance(y, Number):
         next_y = y + dt * f(t, y, *args)
     else:
-        next_y = [y_i + dt * f(t, y, *args)[i] for i, y_i in y]
+        next_y = [y_i + dt * f(t, y, *args)[i] for i, y_i in enumerate(y)]
 
     return next_y
 
@@ -119,8 +119,8 @@ def _next_y_RK4(f: Func[T, Y], dt: T, t: T, y: Y, *args)  -> Y:
             [y_i + dt * s3_i for y_i, s3_i in zip(y, s3)], 
             *args)
         next_y = [
-            y + dt/6 * (s1_i + 2*s2_i + 2*s3_i + s4_i) 
-                for s1_i, s2_i, s3_i, s4_i in zip(s1, s2, s3, s4)
+            y_i + dt/6 * (s1_i + 2*s2_i + 2*s3_i + s4_i) 
+                for y_i, s1_i, s2_i, s3_i, s4_i in zip(y, s1, s2, s3, s4)
         ]
     return next_y
 
