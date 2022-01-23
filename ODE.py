@@ -408,11 +408,14 @@ def _next_dt(dt: T, error_rel: Y, p: int, TOL: Y, dt_max: Optional[T] = None) ->
     Returns:
         T: next dt
     """
-    K = 0.8 * (TOL /error_rel)**(1/(p + 1))
+    if error_rel:
+        K = 0.8 * (TOL /error_rel)**(1/(p + 1))
+    else:
+        K = 2
     if dt_max is None:
         return K * dt
     else:
-        min((dt_max, K))
+        return min((dt_max, K * dt))
 
 SUPPORTED_METHODS = [
     "Euler",
