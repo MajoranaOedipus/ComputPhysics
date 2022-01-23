@@ -239,9 +239,14 @@ Tool packages for other packages
 ### PDE
 WIP
 
-### Optimization
-* root finding (**WIP**)
-* local optimization (**WIP**)
+### Optimisation
+#### root finding
+* binary search (*finished*)
+* Newton's method (*finished*)
+* Secant method (*finished*)
+* regula falsi (*finished*)
+* Muller, IQI and Brent ... (**WIP**)
+#### local optimization (**WIP**)
 * ...
 ### FFT
 WIP
