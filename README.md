@@ -129,7 +129,7 @@ regula falsi : x_0 = 1.5707963267948966, where f(x_0) = 6.123233995736766e-17
 
 ## ODE
 ```Python
-from ComputPhysics.ODE import *
+from ComputPhysics.ODE import solve_IVP_explicit, SUPPORTED_CONST_STEP_METHODS
 def f(t, y):
     return y + t
 
@@ -138,26 +138,11 @@ def y(t):
 
 y0 = 0
 N = 10
-y_solve_Euler = solve_IVP_explicit(f, y0, N=N, method="Euler")
-y_solve_trap = solve_IVP_explicit(f, y0, N=N, method="trapezoid")
-y_solve_mid = solve_IVP_explicit(f, y0, N=N, method="midpoint")
-y_solve_RK4 = solve_IVP_explicit(f, y0, N=N, method="RK4")
-y_solve_RK4_2 = solve_IVP_explicit(f, y0, N=N, method=RK_array_explicit(
-    [
-        [1/2], 
-        [0, 1/2], 
-        [0, 0, 1]
-    ], 
-    [1/6, 1/3, 1/3, 1/6], 
-    [1/2, 1/2, 1]
-    )) 
-
-y_exact = [y(i/N) for i in range(N)]
-difference_Euler = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_Euler, y_exact)) / N) ** 0.5
-difference_trap = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_trap, y_exact)) / N) ** 0.5
-difference_mid = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_mid, y_exact)) / N) ** 0.5
-difference_RK4 = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_RK4, y_exact)) / N) ** 0.5
-difference_RK4_2 = (sum((y1-y2)**2 for y1, y2 in zip(y_solve_RK4_2, y_exact)) / N) ** 0.5
+y_exact = [y(i/N) for i in range(N+1)]
+for method in SUPPORTED_CONST_STEP_METHODS:
+    _, y_solved = solve_IVP_explicit(f, y0, N=N, method=method)
+    difference = (sum((y1-y2)**2 for y1, y2 in zip(y_solved, y_exact)) / N) ** 0.5
+    print(f"{method:10s}: {difference * 1e3 :.9f}E-3")
 ```
 
 Output:
@@ -229,12 +214,14 @@ Tool packages for other packages
 * Adaptive steps (**WIP**)
 
 ### ODE
-#### IVP:
+#### IVP
 * Euler (eplicit) method (*finished*)
 * Midpoint, trapzoid (*finished*)
 * RK4 (*finished*)
 * RK2/3, RKF4/5 (*finished*)
 * ...
+### BVP
+WIP
 
 ### PDE
 WIP

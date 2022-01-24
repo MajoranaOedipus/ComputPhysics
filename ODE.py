@@ -1,21 +1,106 @@
 from numbers import Number, Real
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, TypeVar, Union, overload
 
 T = TypeVar("T", bound=Real)
 Y = TypeVar("Y", Number, List[Number])
 
 Func = Callable[[T, Y, Any], Y]
 
-# def solve_IVP(
-#     f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
-#     method: Union[str, Callable[[Func[T, Y], T, T, Y, Any], Y]] = "Euler", 
-# ):
-#     return 
-
+@overload
 def solve_IVP_explicit(
     f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
-    method: Union[str, Callable[[Func[T, Y], T, T, Y, Any], Y]] = "Euler", 
-    N: int = 100, endpoint = True, args: Tuple[Any] = ()) -> List[Y]:
+    method: Literal["RK23", "RKF45"] = "RKF45", 
+    args: Tuple[Any] = (),
+    dt: T = 1e-3, TOL: Y = 1e-6, dt_max: Optional[T] = None) -> Tuple[List[T], List[Y]]:
+    ...
+@overload
+def solve_IVP_explicit(
+    f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
+    method: Union[
+        Literal["Euler", "Midpoint", "Trapezoid", "RK4"], 
+        Callable[[Func[T, Y], T, T, Y, Any], Y]] = "RKF45", 
+    args: Tuple[Any] = (), 
+    N: int = 100, endpoint: bool = True) -> Tuple[List[T], List[Y]]:
+    ...
+def solve_IVP_explicit(
+    f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
+    method: Union[str, Callable[[Func[T, Y], T, T, Y, Any], Y]] = "RKF45", 
+    args: Tuple[Any] = (), 
+    **kwargs) -> Tuple[List[T], List[Y]]:
+    """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
+        using the given explicit method， with constant step (b - a)/N.
+
+    TypeVars:
+        T = TypeVar("T", bound=Number)
+        Y = TypeVar("Y", Number, List[Number])
+        Func[T, Y] = (T, Y, Any) -> Y
+    Args:
+        f (Func[T, Y], Y]): The function f in y' = f(t, y), 
+            with first parametre one be the parametre of the system 
+            and the second be a number or a list of number representing the function value.
+        y0 (Y, optional): Initial value y(t_0). Defaults to 0.
+        bounds (Tuple[T, T], optional): The range of parametres of the system. Defaults to (0, 1).
+        args (Tuple[Any], optional): Additional args to be passed to `f`. Defaults to ().
+        method (str | (Func[T, Y], T, T, Y, Any) -> Y], optional): The method, defaults to "RKF45". 
+            It should be a str in SUPPORTED_METHODS, or a func (f, dt, t, y, *args) -> next_y
+        **kwargs: keyword arguments to be passed to the specific solver.
+            When method is one of SUPPORTED_CONST_STEP_METHODS: 
+                keywords should be subset of {N, endpoint}, where: 
+                    N (int, optional): The number of steps in the given bounds. Defaults to 100.
+                    endpoint (bool, optional): whether include the end point of bounds or not. defaults to True.
+            When method is one of SUPPORTED_VAR_STEP_METHODS: 
+                keywords should be subset of {dt, TOL, dt_max}, where:
+                    dt (T, optional): Initial step size. Defaults to 1e-3.
+                    TOL (Y, optional): Tolerent error (relative when y is not zero). Defaults to 1e-6.
+                    dt_max (T | None, optional): Max step size. Defaults to None.
+
+        
+    Returns Tuple[List[T], List[Y]]: ts, ys
+    """
+
+    if isinstance(method, str):
+        method = method.lower()
+        if method in _SUPPORTED_IVP_VAR_STEP_METHODS.keys():
+            expected_key = {"dt", "TOL", "dt_max"}
+            for key in kwargs.keys():
+                if key not in expected_key:
+                    raise TypeError(
+                        f"Got unexpected keyword argument {key}. "
+                        f"Parametres for {list(_SUPPORTED_IVP_VAR_STEP_METHODS.keys())} "
+                        f"must be subset of {expected_key}. "
+                        f"help(solve_IVP_RKF45) to learn more. ")
+
+            return _SUPPORTED_IVP_VAR_STEP_METHODS[method](
+                f, y0, bounds, args,
+                **kwargs
+            )
+        try:
+            next_y = _SUPPORTED_IVP_CONST_STEP_METHODS[method]
+        except KeyError:
+            raise ValueError(f"method {method} not supported. Should be one of {SUPPORTED_METHODS}")
+    else:
+        next_y = method
+
+    expected_key = {"N", "endpoint"}
+    for key in kwargs.keys():
+                if key not in expected_key:
+                    raise TypeError(
+                        f"Got unexpected keyword argument {key}. "
+                        f"Parametres for {list(_SUPPORTED_IVP_CONST_STEP_METHODS.keys())} "
+                        f"must be subset of {expected_key}. "
+                        f"help(solve_IVP_explicit_const_step) to learn more. ")
+    return solve_IVP_explicit_const_step(
+        f, y0, bounds, args,
+        method=next_y,
+        **kwargs
+    )
+
+
+
+def solve_IVP_explicit_const_step(
+    f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1), args: Tuple[Any] = (),
+    method: Union[str, Callable[[Func[T, Y], T, T, Y, Any], Y]] = "RK45", 
+    N: int = 100, endpoint: bool = True) -> List[Y]:
     """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
         using the given explicit method， with constant step (b - a)/N.
 
@@ -29,16 +114,20 @@ def solve_IVP_explicit(
             and the second be a number or a list of number representing the function value.
         y0 (Y, optional): Initial value y(t_0). Defaults to 0.
         bounds (Tuple[T, T], optional): The range of parametres of the system. Defaults to (0, 1).
-        N (int, optional): The number of steps in the given bounds. Defaults to 100.
-        method (str | (Func[T, Y], T, T, Y, Any) -> Y], optional): The method. 
-            It should be a str in SUPPORTED_METHODS, or a func (f, dt, t, y, *args) -> next_y
         args (Tuple[Any], optional): Additional args to be passed to f. Defaults to ().
-
+        method (str | (Func[T, Y], T, T, Y, Any) -> Y], optional): The method, defaults to "RK45". 
+            It should be a str in SUPPORTED_METHODS, or a func (f, dt, t, y, *args) -> next_y
+        N (int, optional): The number of steps in the given bounds. Defaults to 100.
+        endpoint (bool, optional): whether include the end point of bounds or not. defaults to True.
+        
     Returns:
-        List[Y]: A list of values of the solved function at t_i := t_0 + i * stepsize, for i in (if endpoint then N + 1 else N)
+        Tuple[List[T], List[Y]]: (ts, ys) where
+            ts:[t_i := t_0 + i * stepsize for i in (if endpoint then N + 1 else N)]
+            ys: Solved function value at ts
     """
-    output = [y0]
+    output_ys = [y0]
     t_0, t_N = bounds
+    output_ts = [t_0]
     dt: T = (t_N - t_0) / N
 
     if isinstance(method, str):
@@ -55,10 +144,11 @@ def solve_IVP_explicit(
 
     for i in range(N-1):
         t_i: T = i * dt + t_0
-        y_i = output[-1]
+        y_i = output_ys[-1]
         y_ip1 = next_y(f, dt, t_i, y_i, *args)
-        output.append(y_ip1)
-    return output
+        output_ys.append(y_ip1)
+        output_ts.append(t_i + dt)
+    return output_ts, output_ys
 
 def _next_y_Euler(f: Func[T, Y], dt: T, t: T, y: Y, *args)  -> Y:
     if isinstance(y, Number):
@@ -186,8 +276,8 @@ def RK_array_explicit(a: List[List[Number]], b: List[Number], c: List[Number]) -
 
 def solve_IVP_RK23(
     f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
-    dt: T = 1e-3, TOL: Y = 1e-6, dt_max: Optional[T] = None,
-    args: Tuple[Any] = ()) -> Tuple[List[T], List[Y]]:
+    args: Tuple[Any] = (),
+    dt: T = 1e-3, TOL: Y = 1e-6, dt_max: Optional[T] = None) -> Tuple[List[T], List[Y]]:
     """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
         using RK2/3 (embedded RK pair).
 
@@ -276,8 +366,8 @@ def solve_IVP_RK23(
 
 def solve_IVP_RKF45(
     f: Func[T, Y], y0: Y = 0, bounds: Tuple[T, T] = (0, 1),
-    dt: T = 1e-3, TOL: Y = 1e-6, dt_max: Optional[T] = None,
-    args: Tuple[Any] = ()) -> Tuple[List[T], List[Y]]:
+    args: Tuple[Any] = (), 
+    dt: T = 1e-3, TOL: Y = 1e-6, dt_max: Optional[T] = None) -> Tuple[List[T], List[Y]]:
     """Solve the IVP ODE problem y' = f(t, y) with initial condition y(t_0) = y_0
         using RKF4/5 (embedded RK pair).
 
@@ -290,9 +380,11 @@ def solve_IVP_RKF45(
             with first parametre one be the parametre of the system 
             and the second be a number or a list of number representing the function value.
         y0 (Y, optional): Initial value y(t_0). Defaults to 0.
-        bounds (Tuple[T, T], optional): The range of parametres of the system. Defaults to (0, 1).
-        N (int, optional): The number of steps in the given bounds. Defaults to 100.
         args (Tuple[Any], optional): Additional args to be passed to f. Defaults to ().
+        bounds (Tuple[T, T], optional): The range of parametres of the system. Defaults to (0, 1).
+        dt (T, optional): Initial step size. Defaults to 1e-3.
+        TOL (Y, optional): Tolerent error (relative when y is not zero). Defaults to 1e-6.
+        dt_max (T | None, optional): Max step size. Defaults to be None.
 
     Returns:
         Tuple[List[T], List[Y]]: (ts, ys) 
@@ -418,12 +510,26 @@ def _next_dt(dt: T, error_rel: Y, p: int, TOL: Y, dt_max: Optional[T] = None) ->
     else:
         return min((dt_max, K * dt))
 
-SUPPORTED_METHODS = [
+SUPPORTED_METHODS = {
+    "Euler",
+    "Midpoint",
+    "Trapezoid",
+    "RK4",
+    "RK23",
+    "RKF45"
+}
+
+SUPPORTED_CONST_STEP_METHODS = {
     "Euler",
     "Midpoint",
     "Trapezoid",
     "RK4"
-]
+}
+
+SUPPORTED_VAR_STEP_METHODS = {
+    "RK23",
+    "RKF45"
+}
 
 _SUPPORTED_IVP_CONST_STEP_METHODS: Dict[str, Callable[[Func[T, Y], T, T, Y, Any], Y]] = {
     "euler": _next_y_Euler,
@@ -436,4 +542,17 @@ _SUPPORTED_IVP_CONST_STEP_METHODS: Dict[str, Callable[[Func[T, Y], T, T, Y, Any]
     "rk2": _next_y_trapezoid
 }
 
+_SUPPORTED_IVP_VAR_STEP_METHODS: Dict[
+    str, 
+    Callable[
+        [Func[T, Y], Y, Tuple[T, T], Tuple[Any], T, Y, Optional[T]], 
+        Tuple[List[T], List[Y]]
+        ]] = {
+    "rkf45": solve_IVP_RKF45,
+    "rkf45": solve_IVP_RKF45,
+    "rk4/5": solve_IVP_RKF45,
+    "rkf4/5": solve_IVP_RKF45,
+    "rk23": solve_IVP_RK23,
+    "rk2/3": solve_IVP_RK23
+}
 
